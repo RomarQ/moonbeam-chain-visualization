@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Moonbeam Infra</title>
+
+    <style>
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        table, th, td {
+            border: 1px solid black;
+        }
+        th, td {
+            padding: 8px;
+            text-align: left;
+        }
+    </style>
+</head>
+<body>
+    <h1>Parachains</h1>
+    <table id="data-table-paras">
+        <thead>
+            <tr>
+            </tr>
+        </thead>
+        <tbody>
+        </tbody>
+    </table>
+
+    <h1>Relaychains</h1>
+    <table id="data-table-relays">
+        <thead>
+            <tr>
+            </tr>
+        </thead>
+        <tbody>
+        </tbody>
+    </table>
+
+    <script>
+        const parachains = [
+            'https://moonbase.unitedbloc.com',
+            'https://moonriver.unitedbloc.com',
+            'https://moonbeam.unitedbloc.com',
+            'https://wss.api.moondev.network',
+            'https://viro-moonsama-rpc-1.rv.moondev.network',
+            'https://moonlama.api.moondev.network',
+        ];
+        const relays = [
+            'https://deo-moonsama-relay-rpc-1.rv.moondev.network',
+            'https://moonlama-relay.api.moondev.network',
+            'https://relay.api.moonbase.moonbeam.network',
+            'https://stagenet-relay.api.moondev.network',
+        ];
+        const githubPublicToken = "";
+        const getHeaders = (target, extend) => {
+            const headers = {
+                ...extend,
+            }
+
+            if (target == "github" && githubPublicToken) {
+                headers["Authorization"] = `Bearer ${githubPublicToken}`;
+            }
+
+            return headers;
+        }
+        const timeAgo = (milliseconds) => {
+            const now = Date.now();
+            const diff = now - milliseconds;
+
+            if (diff < 0) {
+                return "Future time"; // Handle future timestamps if needed
+            }
+
+            const seconds = Math.floor(diff / 1000);
+            const minutes = Math.floor(seconds / 60);
+            const hours = Math.floor(minutes / 60);
+            const days = Math.floor(hours / 24);
+
+            let timeString = [];
+
+            if (days > 0) {
+                timeString.push(`${days} day${days > 1 ? 's' : ''}`);
+            }
+            if (hours % 24 > 0) {
+                timeString.push(`${hours % 24} hour${hours % 24 > 1 ? 's' : ''}`);
+            }
+            if (minutes % 60 > 0) {
+                timeString.push(`${minutes % 60} minute${minutes % 60 > 1 ? 's' : ''}`);
+            }
+            if (seconds % 60 > 0) {
+                timeString.push(`${seconds % 60} second${seconds % 60 > 1 ? 's' : ''}`);
+            } else if (!timeString.length) {
+                return "Just now";
+            }
+
+            return timeString.join(', ') + ' ago';
+        }
+        const decodeScaleU64 = (hexValue) => {
+            if (hexValue.startsWith('0x')) {
+                hexValue = hexValue.slice(2);
+            }
+
+            // Ensure the hex value is 16 characters long (8 bytes) for u64
+            if (hexValue.length !== 16) {
+                throw new Error('Invalid SCALE encoded u64 hex string');
+            }
+
+            // Reverse the byte order (little-endian)
+            let reversedHex = '';
+            for (let i = hexValue.length; i > 0; i -= 2) {
+                reversedHex += hexValue.slice(i - 2, i);
+            }
+
+            // Convert the reversed hex value to a decimal number
+            const decimalValue = BigInt('0x' + reversedHex);
+
+            return decimalValue; // Return as string for large numbers
+        }
+        const post = async (url, body) => {
+            return fetch(url, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body
+                }).then(response => response.json());
+        }
+        async function fetchData(urls, relay = false) {
+            let result = (await Promise.all(urls.map(async url => {
+                const runtimeVersion = await post(
+                    url, 
+                    JSON.stringify({
+                        "id": 1,
+                        "jsonrpc": "2.0",
+                        "method": "state_getRuntimeVersion",
+                        "params": []
+                    })
+                )
+                .catch(err => console.error(err));
+
+                const systemChain = await post(
+                    url,
+                    JSON.stringify(
+                        {
+                            "id": 1,
+                            "jsonrpc": "2.0",
+                            "method": "system_chain"
+                        }
+                    )
+                )
+                .then(({result}) => result)
+                .catch(err => console.error(err));
+
+                const systemVersion = await post(
+                    url,
+                    JSON.stringify(
+                        {
+                            "id": 1,
+                            "jsonrpc": "2.0",
+                            "method": "system_version"
+                        }
+                    )
+                )
+                .then(({result}) => result.split("-")[0])
+                .catch(err => console.error(err));
+
+                let latestReleases = [];
+                if (relay) {
+                    const latestClientRelease = await fetch("https://api.github.com/repos/paritytech/polkadot-sdk/releases/latest",
+                        { 
+                            method: "GET",
+                            headers: getHeaders("github"),
+                        }
+                    )
+                    .then(async response => {
+                        if (response.ok) {
+                            const obj = await response.json();
+                            const regex = /\[polkadot-v(?<version>\d+[.]\d+[.]\d+)\]/g;
+                            const match = regex.exec(obj.body);
+                            return match.groups.version;
+                        }
+                        return null;
+                    })
+                    .catch(err => console.error(err));
+                    
+                    let runtimeFile = "";
+                    if (systemChain.includes("Moonsama")) {
+                        runtimeFile = "https://api.github.com/repos/polkadot-fellows/runtimes/contents/relay/kusama/src/lib.rs";
+                    } else if (systemChain.includes("Moonlama")) {
+                        runtimeFile = "https://api.github.com/repos/polkadot-fellows/runtimes/contents/relay/polkadot/src/lib.rs";
+                    } else {
+                        runtimeFile = "https://api.github.com/repos/paritytech/polkadot-sdk/contents/polkadot/runtime/westend/src/lib.rs";
+                    }
+
+                    const latestRuntimeRelease = await fetch(runtimeFile,
+                            { 
+                                method: "GET",
+                                headers: getHeaders("github"),
+                            }
+                        )
+                        .then(async response => {
+                            if (response.ok) {
+                                const {content} = await response.json();
+                                const fileContent = atob(content);
+                                const regex = /spec_version: (?<version>\d+_\d+_\d+)/g;
+                                const match = regex.exec(fileContent);
+                                return match.groups.version.replace(/_/g, "");
+                            }
+                            return null;
+                        })
+                        .catch(err => console.error(err));
+                    latestReleases = [
+                        latestClientRelease,
+                        latestRuntimeRelease
+                    ];
+                } else {
+                    latestReleases = await fetch("https://api.github.com/repos/moonbeam-foundation/moonbeam/releases",
+                        { 
+                            method: "GET",
+                            headers: getHeaders("github"),
+                        }
+                    )
+                    .then(async response => {
+                        if (response.ok) {
+                            const arr = Array.from(await response.json());
+                            console.log(arr)
+                            const client = arr.find(item => item.tag_name.startsWith("v"));
+                            return [
+                                client.tag_name.slice(1),
+                                arr.find(item => item.tag_name.startsWith("runtime-")).tag_name
+                            ]
+                        }
+                        return null;
+                    })
+                    .catch(err => console.error(err)); 
+                }
+
+                const lastBlockTimestamp = await post(
+                    url, 
+                    JSON.stringify({
+                        "id": 1,
+                        "jsonrpc": "2.0",
+                        "method": "state_getStorage",
+                        "params": ["0xf0c365c3cf59d671eb72da0e7a4113c49f1f0515f462cdcf84e0f1d6045dfcbb"]
+                    })
+                )
+                .then(({result}) => result)
+                .catch(err => console.error(err));
+
+                if (!latestReleases || !systemChain || !systemVersion || !runtimeVersion) {
+                    return null;
+                }
+
+                return {
+                    name: systemChain,
+                    client: systemVersion,
+                    latestClient: latestReleases[0],
+                    runtime: String(runtimeVersion.result.specVersion),
+                    latestRuntime: latestReleases[1].replace("runtime-", ""),
+                    lastBlockTimestamp: Number(decodeScaleU64(lastBlockTimestamp))
+                };
+            }))).filter(item => !!item);
+            
+            return result;
+        }
+        fetchData(parachains).then(data => {
+            // Populate table with the data
+            const table = document.getElementById('data-table-paras');
+            const thead = table.querySelector('thead tr');
+            const tbody = table.querySelector('tbody');
+
+            // Create table headers
+            ["Network", "Current Client", "Latest Client", "Current Runtime", "Latest Runtime", "Last Block"].forEach(key => {
+                const th = document.createElement('th');
+                th.textContent = key.charAt(0).toUpperCase() + key.slice(1); // Capitalize first letter
+                thead.appendChild(th);
+            });
+
+            // Create table rows
+            for (const item of data) {
+                const tr = document.createElement('tr');
+
+                const nameTd = document.createElement('td');
+                nameTd.textContent = item.name;
+                tr.appendChild(nameTd);
+
+                const clientTd = document.createElement('td');
+                const latestClientTd = document.createElement('td');
+                clientTd.textContent = item.client;
+                latestClientTd.textContent = item.latestClient;
+                if (item.client === item.latestClient) {
+                    latestClientTd.style = "background-color: #e8f7e1;";
+                    clientTd.style = "background-color: #e8f7e1;";
+                } else {
+                    latestClientTd.style = "background-color: #FBCEB1;";
+                    clientTd.style = "background-color: #FBCEB1;";
+                }
+                tr.appendChild(clientTd);
+                tr.appendChild(latestClientTd);
+
+                const runtimeTd = document.createElement('td');
+                const latestRuntime = document.createElement('td');
+                runtimeTd.textContent = item.runtime;
+                latestRuntime.textContent = item.latestRuntime;
+                if (item.runtime === item.latestRuntime) {
+                    latestRuntime.style = "background-color: #e8f7e1;";
+                    runtimeTd.style = "background-color: #e8f7e1;";
+                } else {
+                    latestRuntime.style = "background-color: #FBCEB1;";
+                    runtimeTd.style = "background-color: #FBCEB1;";
+                }
+                tr.appendChild(runtimeTd);
+                tr.appendChild(latestRuntime);
+
+                const timestamp = document.createElement('td');
+                timestamp.textContent = timeAgo(item.lastBlockTimestamp);
+                tr.appendChild(timestamp);
+
+                tbody.appendChild(tr);
+            }
+           
+        })
+        .catch(error => {
+            console.error('Error fetching data:', error);
+        });
+
+        fetchData(relays, true).then(data => {
+            console.log(data);
+            // Populate table with the data
+            const table = document.getElementById('data-table-relays');
+            const thead = table.querySelector('thead tr');
+            const tbody = table.querySelector('tbody');
+
+            // Create table headers
+            ["Network", "Current Client", "Latest Client", "Current Runtime", "Latest Runtime", "Last Block"].forEach(key => {
+                const th = document.createElement('th');
+                th.textContent = key.charAt(0).toUpperCase() + key.slice(1); // Capitalize first letter
+                thead.appendChild(th);
+            });
+
+            // Create table rows
+            for (const item of data) {
+                const tr = document.createElement('tr');
+
+                const nameTd = document.createElement('td');
+                nameTd.textContent = item.name;
+                tr.appendChild(nameTd);
+
+                const clientTd = document.createElement('td');
+                const latestClientTd = document.createElement('td');
+                clientTd.textContent = item.client;
+                latestClientTd.textContent = item.latestClient;
+                if (item.client === item.latestClient) {
+                    latestClientTd.style = "background-color: #e8f7e1;";
+                    clientTd.style = "background-color: #e8f7e1;";
+                } else {
+                    latestClientTd.style = "background-color: #FBCEB1;";
+                    clientTd.style = "background-color: #FBCEB1;";
+                }
+                tr.appendChild(clientTd);
+                tr.appendChild(latestClientTd);
+
+                const runtimeTd = document.createElement('td');
+                const latestRuntime = document.createElement('td');
+                runtimeTd.textContent = item.runtime;
+                latestRuntime.textContent = item.latestRuntime;
+                if (item.runtime === item.latestRuntime) {
+                    latestRuntime.style = "background-color: #e8f7e1;";
+                    runtimeTd.style = "background-color: #e8f7e1;";
+                } else {
+                    latestRuntime.style = "background-color: #FBCEB1;";
+                    runtimeTd.style = "background-color: #FBCEB1;";
+                }
+                tr.appendChild(runtimeTd);
+                tr.appendChild(latestRuntime);
+
+                const timestamp = document.createElement('td');
+                timestamp.textContent = timeAgo(item.lastBlockTimestamp);
+                tr.appendChild(timestamp);
+
+                tbody.appendChild(tr);
+            }
+           
+        })
+        .catch(error => {
+            console.error('Error fetching data:', error);
+        });
+    </script>
+</body>
+</html>
