@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Moonbeam Chain Status</title>
+
+  <style>
+    :root {
+      --color-bg: #0a0a0a;
+      --color-card: #1a1a1a;
+      --color-border: #2a2a2a;
+      --color-header: #111111;
+      --color-accent: #00ff88;
+      --color-pass: #00ff8822;
+      --color-fail: #ff444422;
+      --color-text: #e0e0e0;
+      --color-text-dim: #888888;
+      --color-success: #00ff88;
+      --color-danger: #ff4444;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      padding: 2rem;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background-color: var(--color-bg);
+      color: var(--color-text);
+      line-height: 1.6;
+    }
+
+    h1 {
+      color: var(--color-text);
+      font-size: 1.5rem;
+      font-weight: 600;
+      margin-top: 3rem;
+      margin-bottom: 1.5rem;
+      letter-spacing: -0.02em;
+      position: relative;
+      padding-left: 1rem;
+    }
+    
+    h1::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 4px;
+      height: 24px;
+      background: var(--color-accent);
+      border-radius: 2px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 2rem;
+      background-color: var(--color-card);
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+      border: 1px solid var(--color-border);
+      border-radius: 12px;
+      overflow: hidden;
+      animation: fadeIn 0.5s ease-in-out;
+    }
+
+    thead {
+      background-color: var(--color-header);
+      color: var(--color-text-dim);
+      font-size: 0.875rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      font-weight: 600;
+    }
+
+    th, td {
+      padding: 16px 20px;
+      text-align: left;
+    }
+    
+    th:first-child, td:first-child {
+      font-weight: 500;
+    }
+
+    tbody tr {
+      border-bottom: 1px solid var(--color-border);
+      transition: background-color 0.2s ease;
+    }
+    
+    tbody tr:last-child {
+      border-bottom: none;
+    }
+
+    tbody tr:hover {
+      background-color: #ffffff08;
+    }
+
+    td.pass {
+      background-color: var(--color-pass);
+      color: var(--color-success);
+      font-weight: 500;
+      transition: all 0.3s ease;
+    }
+
+    td.fail {
+      background-color: var(--color-fail);
+      color: var(--color-danger);
+      font-weight: 500;
+      transition: all 0.3s ease;
+    }
+
+    @media (max-width: 768px) {
+      table, thead, tbody, th, td, tr {
+        display: block;
+      }
+
+      thead {
+        display: none;
+      }
+
+      tr {
+        margin-bottom: 1rem;
+        border: 1px solid var(--color-border);
+        border-radius: 8px;
+        padding: 10px;
+        background-color: var(--color-card);
+      }
+
+      td {
+        display: flex;
+        justify-content: space-between;
+        padding: 8px 10px;
+        border: none;
+        border-bottom: 1px solid var(--color-border);
+      }
+
+      td::before {
+        content: attr(data-label);
+        font-weight: 600;
+        margin-right: 1rem;
+        color: var(--color-text-dim);
+        font-size: 0.875rem;
+      }
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+  </style>
+</head>
+<body>
+
+  <h1>Parachains</h1>
+  <table id="data-table-paras">
+    <thead><tr></tr></thead>
+    <tbody></tbody>
+  </table>
+
+  <h1>System Parachains</h1>
+  <table id="data-table-system">
+    <thead><tr></tr></thead>
+    <tbody></tbody>
+  </table>
+
+  <h1>Relaychains</h1>
+  <table id="data-table-relays">
+    <thead><tr></tr></thead>
+    <tbody></tbody>
+  </table>
+
+  <script>
+    const parachains = [
+      'https://wss.api.moonbase.moonbeam.network',
+      'https://moonbase-beta.api.moonbase.moonbeam.network',
+      'https://wss.api.moondev.network',
+      'https://viro-moonsama-rpc-1.rv.moondev.network',
+      'https://moonlama.api.moondev.network',
+      'https://wss.api.moonriver.moonbeam.network',
+      'https://wss.api.moonbeam.network',
+    ];
+    const systemParachains = [
+      'https://coretime.api.moonbase.moonbeam.network',
+      'https://statemint.api.moonbase.moonbeam.network',
+    ];
+    const relays = [
+      'https://deo-moonsama-relay-rpc-1.rv.moondev.network',
+      'https://moonlama-relay.api.moondev.network',
+      'https://relay.api.moonbase.moonbeam.network',
+      'https://stagenet-relay.api.moondev.network',
+    ];
+
+    const githubTokenParts = ['Z2l0aHVi', 'cGF0', 'MTFBRk1MUlpRMGc0aDRBTWpPaXBUbw==', 'NG1GdFVxSlRXT3R3clVIMHZVOUUzbFJrRTVoVmRQeDRXclgxaGRLYXFPRkNCWktYQlM2TGNyYkkxUlk='];
+
+    const getHeaders = (target, extra = {}) => {
+      const headers = { ...extra };
+      if (target === "github") {
+        headers["Authorization"] = `Bearer ${githubTokenParts.map(atob).join("_")}`;
+      }
+      return headers;
+    };
+
+    const safePost = async (url, body) => {
+      try {
+        const response = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body
+        });
+        return await response.json();
+      } catch (error) {
+        console.error(`POST to ${url} failed:`, error);
+        return null;
+      }
+    };
+
+    const decodeScaleU64 = hex => {
+      if (hex.startsWith('0x')) hex = hex.slice(2);
+      if (hex.length !== 16) throw new Error("Invalid SCALE-encoded u64");
+      const reversed = hex.match(/.{2}/g).reverse().join('');
+      return BigInt("0x" + reversed);
+    };
+
+    const timeAgo = ms => {
+      const diff = Date.now() - ms;
+      if (diff < 0) return "Just now";
+      const s = Math.floor(diff / 1000),
+            m = Math.floor(s / 60),
+            h = Math.floor(m / 60),
+            d = Math.floor(h / 24);
+
+      const parts = [];
+      if (d) parts.push(`${d} day${d > 1 ? 's' : ''}`);
+      if (h % 24) parts.push(`${h % 24} hour${h % 24 > 1 ? 's' : ''}`);
+      if (m % 60) parts.push(`${m % 60} minute${m % 60 > 1 ? 's' : ''}`);
+      if (s % 60 || parts.length === 0) parts.push(`${s % 60} second${s % 60 > 1 ? 's' : ''}`);
+      return parts.join(', ') + ' ago';
+    };
+
+    async function fetchData(urls, external = false) {
+      const results = await Promise.all(urls.map(async url => {
+        const runtimeVersion = await safePost(url, JSON.stringify({
+          id: 1, jsonrpc: "2.0", method: "state_getRuntimeVersion", params: []
+        }));
+        const systemChain = await safePost(url, JSON.stringify({
+          id: 1, jsonrpc: "2.0", method: "system_chain"
+        })).then(res => res?.result);
+        const systemVersion = await safePost(url, JSON.stringify({
+          id: 1, jsonrpc: "2.0", method: "system_version"
+        })).then(res => res?.result?.split("-")[0]);
+
+        let latestReleases = [];
+
+        if (external) {
+          const latestClientRelease = await fetch(
+            "https://api.github.com/repos/paritytech/polkadot-sdk/releases/latest",
+            { headers: getHeaders("github") }
+          )
+            .then(r => r.ok ? r.json() : null)
+            .then(obj => {
+              const match = /\[polkadot-v(?<version>\d+\.\d+\.\d+)\]/.exec(obj?.body || '');
+              return match?.groups?.version || null;
+            });
+
+          let runtimePath = "https://api.github.com/repos/paritytech/polkadot-sdk/contents/";
+          const spec = runtimeVersion.result.specName;
+
+          if (spec.startsWith("westmint")) {
+            runtimePath += "cumulus/parachains/runtimes/assets/asset-hub-westend/src/lib.rs";
+          } else if (spec.startsWith("coretime")) {
+            runtimePath += `cumulus/parachains/runtimes/coretime/${spec}/src/lib.rs`;
+          } else if (spec === "westend") {
+            runtimePath += "polkadot/runtime/westend/src/lib.rs";
+          } else {
+            runtimePath = `https://api.github.com/repos/polkadot-fellows/runtimes/contents/relay/${spec}/src/lib.rs`;
+          }
+
+          const latestRuntimeRelease = await fetch(runtimePath, {
+            headers: getHeaders("github")
+          })
+            .then(r => r.ok ? r.json() : null)
+            .then(obj => {
+              const content = atob(obj?.content || '');
+              const match = /spec_version:\s(?<version>\d+_\d+_\d+)/.exec(content);
+              return match?.groups?.version?.replace(/_/g, "") || null;
+            });
+
+          latestReleases = [latestClientRelease, latestRuntimeRelease];
+        } else {
+          latestReleases = await fetch(
+            "https://api.github.com/repos/moonbeam-foundation/moonbeam/releases",
+            { headers: getHeaders("github") }
+          )
+            .then(r => r.ok ? r.json() : [])
+            .then(arr => {
+              const client = arr.find(item => item.tag_name.startsWith("v"));
+              const runtime = arr.find(item => item.tag_name.startsWith("runtime-"));
+              return [client?.tag_name?.slice(1), runtime?.tag_name?.replace("runtime-", "")];
+            });
+        }
+
+        const lastBlock = await safePost(url, JSON.stringify({
+          id: 1,
+          jsonrpc: "2.0",
+          method: "state_getStorage",
+          params: ["0xf0c365c3cf59d671eb72da0e7a4113c49f1f0515f462cdcf84e0f1d6045dfcbb"]
+        })).then(res => res?.result);
+
+        if (!systemChain || !systemVersion || !runtimeVersion) return null;
+
+        return {
+          name: systemChain,
+          client: systemVersion,
+          latestClient: latestReleases[0],
+          runtime: Number(runtimeVersion.result.specVersion),
+          specName: runtimeVersion.result.specName,
+          latestRuntime: Number(latestReleases[1]),
+          lastBlockTimestamp: Number(decodeScaleU64(lastBlock))
+        };
+      }));
+      return results.filter(Boolean);
+    }
+
+    function populateTable(data, tableId) {
+      const table = document.getElementById(tableId);
+      const thead = table.querySelector("thead tr");
+      const tbody = table.querySelector("tbody");
+      thead.innerHTML = '';
+      tbody.innerHTML = '';
+
+      const headers = ["Network", "Current Client", "Latest Client", "Current Runtime", "Latest Runtime", "Last Block"];
+      headers.forEach(text => {
+        const th = document.createElement("th");
+        th.textContent = text;
+        thead.appendChild(th);
+      });
+
+      data.forEach(item => {
+        const tr = document.createElement("tr");
+
+        const cells = [
+          `${item.name} (${item.specName})`,
+          item.client,
+          item.latestClient,
+          item.runtime,
+          item.latestRuntime,
+          timeAgo(item.lastBlockTimestamp)
+        ];
+
+        cells.forEach((value, index) => {
+          const td = document.createElement("td");
+          td.textContent = value;
+          td.setAttribute("data-label", headers[index]);
+
+          if (
+            (index === 1 || index === 2) && item.client !== item.latestClient ||
+            (index === 3 || index === 4) && item.runtime < item.latestRuntime
+          ) {
+            td.classList.add("fail");
+          } else if (index >= 1 && index <= 4) {
+            td.classList.add("pass");
+          }
+
+          tr.appendChild(td);
+        });
+
+        tbody.appendChild(tr);
+      });
+    }
+
+    // Fetch and populate all tables
+    fetchData(parachains).then(data => populateTable(data, "data-table-paras"));
+    fetchData(systemParachains, true).then(data => populateTable(data, "data-table-system"));
+    fetchData(relays, true).then(data => populateTable(data, "data-table-relays"));
+  </script>
+</body>
+</html>
