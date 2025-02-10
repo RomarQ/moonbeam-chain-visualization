@@ -266,6 +266,7 @@
                     client: systemVersion,
                     latestClient: latestReleases[0],
                     runtime: String(runtimeVersion.result.specVersion),
+                    specName: String(runtimeVersion.result.specName),
                     latestRuntime: latestReleases[1].replace("runtime-", ""),
                     lastBlockTimestamp: Number(decodeScaleU64(lastBlockTimestamp))
                 };
@@ -291,7 +292,7 @@
                 const tr = document.createElement('tr');
 
                 const nameTd = document.createElement('td');
-                nameTd.textContent = item.name;
+                nameTd.textContent = `${item.name} (${item.specName})`;
                 tr.appendChild(nameTd);
 
                 const clientTd = document.createElement('td');
@@ -353,7 +354,7 @@
                 const tr = document.createElement('tr');
 
                 const nameTd = document.createElement('td');
-                nameTd.textContent = item.name;
+                nameTd.textContent = `${item.name} (${item.specName})`;
                 tr.appendChild(nameTd);
 
                 const clientTd = document.createElement('td');
