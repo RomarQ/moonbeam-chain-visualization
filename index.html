@@ -1,478 +1,266 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Moonbeam Infra</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Moonbeam Infra</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f9f9f9;
+      margin: 2em;
+    }
 
-    <style>
-        table {
-            width: 100%;
-            border-collapse: collapse;
-        }
-        table, th, td {
-            border: 1px solid black;
-        }
-        th, td {
-            padding: 8px;
-            text-align: left;
-        }
-    </style>
+    h1 {
+      margin-top: 2em;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 2em;
+      background-color: #fff;
+    }
+
+    table, th, td {
+      border: 1px solid black;
+    }
+
+    th {
+      background-color: #333;
+      color: white;
+      text-align: left;
+    }
+
+    th, td {
+      padding: 8px;
+    }
+  </style>
 </head>
 <body>
-    <h1>Parachains</h1>
-    <table id="data-table-paras">
-        <thead>
-            <tr>
-            </tr>
-        </thead>
-        <tbody>
-        </tbody>
-    </table>
+  <h1>Parachains</h1>
+  <table id="data-table-paras">
+    <thead><tr></tr></thead>
+    <tbody></tbody>
+  </table>
 
-    <h1>System Parachains</h1>
-    <table id="data-table-system">
-        <thead>
-            <tr>
-            </tr>
-        </thead>
-        <tbody>
-        </tbody>
-    </table>
+  <h1>System Parachains</h1>
+  <table id="data-table-system">
+    <thead><tr></tr></thead>
+    <tbody></tbody>
+  </table>
 
-    <h1>Relaychains</h1>
-    <table id="data-table-relays">
-        <thead>
-            <tr>
-            </tr>
-        </thead>
-        <tbody>
-        </tbody>
-    </table>
+  <h1>Relaychains</h1>
+  <table id="data-table-relays">
+    <thead><tr></tr></thead>
+    <tbody></tbody>
+  </table>
 
-    <script>
-        const parachains = [
-            'https://wss.api.moonbase.moonbeam.network',
-            "https://moonbase-beta.api.moonbase.moonbeam.network",
-            'https://wss.api.moondev.network',
-            'https://viro-moonsama-rpc-1.rv.moondev.network',
-            'https://moonlama.api.moondev.network',
-            'https://wss.api.moonriver.moonbeam.network',
-            'https://wss.api.moonbeam.network',
-        ];
-        const systemParachains = [
-            "https://coretime.api.moonbase.moonbeam.network",
-            "https://statemint.api.moonbase.moonbeam.network"
-        ];
-        const relays = [
-            'https://deo-moonsama-relay-rpc-1.rv.moondev.network',
-            'https://moonlama-relay.api.moondev.network',
-            'https://relay.api.moonbase.moonbeam.network',
-            'https://stagenet-relay.api.moondev.network',
-        ];
-        const t = [
-            "Z2l0aHVi",
-            "cGF0",
-            "MTFBRk1MUlpRMHF5RGhPSE9mRlpmYw==",
-            "WUxFemxjNDlrZ0I1YXFjcGlrd0xna0kzZVFKRTM3dEtjdm5nZWZEUTg5Z1BQSjVPSFlMVHlaUGczYXo="
-        ];
-        const getHeaders = (target, extend) => {
-            const headers = {
-                ...extend,
-            }
+  <script>
+    const parachains = [
+      'https://wss.api.moonbase.moonbeam.network',
+      'https://moonbase-beta.api.moonbase.moonbeam.network',
+      'https://wss.api.moondev.network',
+      'https://viro-moonsama-rpc-1.rv.moondev.network',
+      'https://moonlama.api.moondev.network',
+      'https://wss.api.moonriver.moonbeam.network',
+      'https://wss.api.moonbeam.network',
+    ];
+    const systemParachains = [
+      'https://coretime.api.moonbase.moonbeam.network',
+      'https://statemint.api.moonbase.moonbeam.network',
+    ];
+    const relays = [
+      'https://deo-moonsama-relay-rpc-1.rv.moondev.network',
+      'https://moonlama-relay.api.moondev.network',
+      'https://relay.api.moonbase.moonbeam.network',
+      'https://stagenet-relay.api.moondev.network',
+    ];
 
-            if (target == "github") {
-                headers["Authorization"] = `Bearer ${t.map(atob).join("_")}`;
-            }
+    const githubTokenParts = [
+      "Z2l0aHVi", "cGF0", "MTFBRk1MUlpRMHF5RGhPSE9mRlpmYw==",
+      "WUxFemxjNDlrZ0I1YXFjcGlrd0xna0kzZVFKRTM3dEtjdm5nZWZEUTg5Z1BQSjVPSFlMVHlaUGczYXo="
+    ];
 
-            return headers;
-        }
-        const timeAgo = (milliseconds) => {
-            const now = Date.now();
-            const diff = now - milliseconds;
+    const getHeaders = (target, extra = {}) => {
+      const headers = { ...extra };
+      if (target === "github") {
+        headers["Authorization"] = `Bearer ${githubTokenParts.map(atob).join("_")}`;
+      }
+      return headers;
+    };
 
-            if (diff < 0) {
-                return "Future time"; // Handle future timestamps if needed
-            }
+    const safePost = async (url, body) => {
+      try {
+        const response = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body
+        });
+        return await response.json();
+      } catch (error) {
+        console.error(`POST to ${url} failed:`, error);
+        return null;
+      }
+    };
 
-            const seconds = Math.floor(diff / 1000);
-            const minutes = Math.floor(seconds / 60);
-            const hours = Math.floor(minutes / 60);
-            const days = Math.floor(hours / 24);
+    const decodeScaleU64 = hex => {
+      if (hex.startsWith('0x')) hex = hex.slice(2);
+      if (hex.length !== 16) throw new Error("Invalid SCALE-encoded u64");
+      const reversed = hex.match(/.{2}/g).reverse().join('');
+      return BigInt("0x" + reversed);
+    };
 
-            let timeString = [];
+    const timeAgo = ms => {
+      const diff = Date.now() - ms;
+      if (diff < 0) return "Just now";
+      const s = Math.floor(diff / 1000),
+            m = Math.floor(s / 60),
+            h = Math.floor(m / 60),
+            d = Math.floor(h / 24);
 
-            if (days > 0) {
-                timeString.push(`${days} day${days > 1 ? 's' : ''}`);
-            }
-            if (hours % 24 > 0) {
-                timeString.push(`${hours % 24} hour${hours % 24 > 1 ? 's' : ''}`);
-            }
-            if (minutes % 60 > 0) {
-                timeString.push(`${minutes % 60} minute${minutes % 60 > 1 ? 's' : ''}`);
-            }
-            if (seconds % 60 > 0) {
-                timeString.push(`${seconds % 60} second${seconds % 60 > 1 ? 's' : ''}`);
-            } else if (!timeString.length) {
-                return "Just now";
-            }
+      const parts = [];
+      if (d) parts.push(`${d} day${d > 1 ? 's' : ''}`);
+      if (h % 24) parts.push(`${h % 24} hour${h % 24 > 1 ? 's' : ''}`);
+      if (m % 60) parts.push(`${m % 60} minute${m % 60 > 1 ? 's' : ''}`);
+      if (s % 60 || parts.length === 0) parts.push(`${s % 60} second${s % 60 > 1 ? 's' : ''}`);
+      return parts.join(', ') + ' ago';
+    };
 
-            return timeString.join(', ') + ' ago';
-        }
-        const decodeScaleU64 = (hexValue) => {
-            if (hexValue.startsWith('0x')) {
-                hexValue = hexValue.slice(2);
-            }
+    async function fetchData(urls, external = false) {
+      const results = await Promise.all(urls.map(async url => {
+        const runtimeVersion = await safePost(url, JSON.stringify({
+          id: 1, jsonrpc: "2.0", method: "state_getRuntimeVersion", params: []
+        }));
+        const systemChain = await safePost(url, JSON.stringify({
+          id: 1, jsonrpc: "2.0", method: "system_chain"
+        })).then(res => res?.result);
+        const systemVersion = await safePost(url, JSON.stringify({
+          id: 1, jsonrpc: "2.0", method: "system_version"
+        })).then(res => res?.result?.split("-")[0]);
 
-            // Ensure the hex value is 16 characters long (8 bytes) for u64
-            if (hexValue.length !== 16) {
-                throw new Error('Invalid SCALE encoded u64 hex string');
-            }
+        let latestReleases = [];
 
-            // Reverse the byte order (little-endian)
-            let reversedHex = '';
-            for (let i = hexValue.length; i > 0; i -= 2) {
-                reversedHex += hexValue.slice(i - 2, i);
-            }
-
-            // Convert the reversed hex value to a decimal number
-            const decimalValue = BigInt('0x' + reversedHex);
-
-            return decimalValue; // Return as string for large numbers
-        }
-        const post = async (url, body) => {
-            return fetch(url, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body
-                }).then(response => response.json());
-        }
-        async function fetchData(urls, external = false) {
-            let result = (await Promise.all(urls.map(async url => {
-                const runtimeVersion = await post(
-                    url, 
-                    JSON.stringify({
-                        "id": 1,
-                        "jsonrpc": "2.0",
-                        "method": "state_getRuntimeVersion",
-                        "params": []
-                    })
-                )
-                .catch(err => console.error(err));
-
-                const systemChain = await post(
-                    url,
-                    JSON.stringify(
-                        {
-                            "id": 1,
-                            "jsonrpc": "2.0",
-                            "method": "system_chain"
-                        }
-                    )
-                )
-                .then(({result}) => result)
-                .catch(err => console.error(err));
-
-                const systemVersion = await post(
-                    url,
-                    JSON.stringify(
-                        {
-                            "id": 1,
-                            "jsonrpc": "2.0",
-                            "method": "system_version"
-                        }
-                    )
-                )
-                .then(({result}) => result.split("-")[0])
-                .catch(err => console.error(err));
-
-                let latestReleases = [];
-                if (external) {
-                    const latestClientRelease = await fetch("https://api.github.com/repos/paritytech/polkadot-sdk/releases/latest",
-                        { 
-                            method: "GET",
-                            headers: getHeaders("github"),
-                        }
-                    )
-                    .then(async response => {
-                        if (response.ok) {
-                            const obj = await response.json();
-                            const regex = /\[polkadot-v(?<version>\d+[.]\d+[.]\d+)\]/g;
-                            const match = regex.exec(obj.body);
-                            return match.groups.version;
-                        }
-                        return null;
-                    })
-                    .catch(err => console.error(err));
-                    
-                    let runtimeFile = "";
-                    if (runtimeVersion.result.specName.startsWith("westmint")) {
-                        runtimeFile = `https://api.github.com/repos/paritytech/polkadot-sdk/contents/cumulus/parachains/runtimes/assets/asset-hub-westend/src/lib.rs`;
-                    } else if (runtimeVersion.result.specName.startsWith("coretime")) {
-                        runtimeFile = `https://api.github.com/repos/paritytech/polkadot-sdk/contents/cumulus/parachains/runtimes/coretime/${runtimeVersion.result.specName}/src/lib.rs`;
-                    } else if (runtimeVersion.result.specName === "westend") {
-                        runtimeFile = "https://api.github.com/repos/paritytech/polkadot-sdk/contents/polkadot/runtime/westend/src/lib.rs";
-                    } else {
-                        runtimeFile = `https://api.github.com/repos/polkadot-fellows/runtimes/contents/relay/${runtimeVersion.result.specName}/src/lib.rs`;
-                    }
-
-                    const latestRuntimeRelease = await fetch(runtimeFile,
-                            { 
-                                method: "GET",
-                                headers: getHeaders("github"),
-                            }
-                        )
-                        .then(async response => {
-                            if (response.ok) {
-                                const {content} = await response.json();
-                                const fileContent = atob(content);
-                                const regex = /spec_version: (?<version>\d+_\d+_\d+)/g;
-                                const match = regex.exec(fileContent);
-                                return match.groups.version.replace(/_/g, "");
-                            }
-                            return null;
-                        })
-                        .catch(err => console.error(err));
-                    latestReleases = [
-                        latestClientRelease,
-                        latestRuntimeRelease
-                    ];
-                } else {
-                    latestReleases = await fetch("https://api.github.com/repos/moonbeam-foundation/moonbeam/releases",
-                        { 
-                            method: "GET",
-                            headers: getHeaders("github"),
-                        }
-                    )
-                    .then(async response => {
-                        if (response.ok) {
-                            const arr = Array.from(await response.json());
-                            console.log(arr)
-                            const client = arr.find(item => item.tag_name.startsWith("v"));
-                            return [
-                                client.tag_name.slice(1),
-                                arr.find(item => item.tag_name.startsWith("runtime-")).tag_name
-                            ]
-                        }
-                        return null;
-                    })
-                    .catch(err => console.error(err)); 
-                }
-
-                const lastBlockTimestamp = await post(
-                    url, 
-                    JSON.stringify({
-                        "id": 1,
-                        "jsonrpc": "2.0",
-                        "method": "state_getStorage",
-                        "params": ["0xf0c365c3cf59d671eb72da0e7a4113c49f1f0515f462cdcf84e0f1d6045dfcbb"]
-                    })
-                )
-                .then(({result}) => result)
-                .catch(err => console.error(err));
-
-                if (!latestReleases || !systemChain || !systemVersion || !runtimeVersion) {
-                    return null;
-                }
-
-                return {
-                    name: systemChain,
-                    client: systemVersion,
-                    latestClient: latestReleases[0],
-                    runtime: String(runtimeVersion.result.specVersion),
-                    specName: String(runtimeVersion.result.specName),
-                    latestRuntime: latestReleases[1].replace("runtime-", ""),
-                    lastBlockTimestamp: Number(decodeScaleU64(lastBlockTimestamp))
-                };
-            }))).filter(item => !!item);
-            
-            return result;
-        }
-        fetchData(parachains).then(data => {
-            // Populate table with the data
-            const table = document.getElementById('data-table-paras');
-            const thead = table.querySelector('thead tr');
-            const tbody = table.querySelector('tbody');
-
-            // Create table headers
-            ["Network", "Current Client", "Latest Client", "Current Runtime", "Latest Runtime", "Last Block"].forEach(key => {
-                const th = document.createElement('th');
-                th.textContent = key.charAt(0).toUpperCase() + key.slice(1); // Capitalize first letter
-                thead.appendChild(th);
+        if (external) {
+          const latestClientRelease = await fetch(
+            "https://api.github.com/repos/paritytech/polkadot-sdk/releases/latest",
+            { headers: getHeaders("github") }
+          )
+            .then(r => r.ok ? r.json() : null)
+            .then(obj => {
+              const match = /\[polkadot-v(?<version>\d+\.\d+\.\d+)\]/.exec(obj?.body || '');
+              return match?.groups?.version || null;
             });
 
-            // Create table rows
-            for (const item of data) {
-                const tr = document.createElement('tr');
+          let runtimePath = "https://api.github.com/repos/paritytech/polkadot-sdk/contents/";
+          const spec = runtimeVersion.result.specName;
 
-                const nameTd = document.createElement('td');
-                nameTd.textContent = `${item.name} (${item.specName})`;
-                tr.appendChild(nameTd);
+          if (spec.startsWith("westmint")) {
+            runtimePath += "cumulus/parachains/runtimes/assets/asset-hub-westend/src/lib.rs";
+          } else if (spec.startsWith("coretime")) {
+            runtimePath += `cumulus/parachains/runtimes/coretime/${spec}/src/lib.rs`;
+          } else if (spec === "westend") {
+            runtimePath += "polkadot/runtime/westend/src/lib.rs";
+          } else {
+            runtimePath = `https://api.github.com/repos/polkadot-fellows/runtimes/contents/relay/${spec}/src/lib.rs`;
+          }
 
-                const clientTd = document.createElement('td');
-                const latestClientTd = document.createElement('td');
-                clientTd.textContent = item.client;
-                latestClientTd.textContent = item.latestClient;
-                if (item.client === item.latestClient) {
-                    latestClientTd.style = "background-color: #e8f7e1;";
-                    clientTd.style = "background-color: #e8f7e1;";
-                } else {
-                    latestClientTd.style = "background-color: #FBCEB1;";
-                    clientTd.style = "background-color: #FBCEB1;";
-                }
-                tr.appendChild(clientTd);
-                tr.appendChild(latestClientTd);
-
-                const runtimeTd = document.createElement('td');
-                const latestRuntime = document.createElement('td');
-                runtimeTd.textContent = item.runtime;
-                latestRuntime.textContent = item.latestRuntime;
-                if (item.runtime === item.latestRuntime) {
-                    latestRuntime.style = "background-color: #e8f7e1;";
-                    runtimeTd.style = "background-color: #e8f7e1;";
-                } else {
-                    latestRuntime.style = "background-color: #FBCEB1;";
-                    runtimeTd.style = "background-color: #FBCEB1;";
-                }
-                tr.appendChild(runtimeTd);
-                tr.appendChild(latestRuntime);
-
-                const timestamp = document.createElement('td');
-                timestamp.textContent = timeAgo(item.lastBlockTimestamp);
-                tr.appendChild(timestamp);
-
-                tbody.appendChild(tr);
-            }
-           
-        })
-        .catch(error => {
-            console.error('Error fetching data:', error);
-        });
-
-        fetchData(systemParachains, true).then(data => {
-            // Populate table with the data
-            const table = document.getElementById('data-table-system');
-            const thead = table.querySelector('thead tr');
-            const tbody = table.querySelector('tbody');
-
-            // Create table headers
-            ["Network", "Current Client", "Latest Client", "Current Runtime", "Latest Runtime", "Last Block"].forEach(key => {
-                const th = document.createElement('th');
-                th.textContent = key.charAt(0).toUpperCase() + key.slice(1); // Capitalize first letter
-                thead.appendChild(th);
+          const latestRuntimeRelease = await fetch(runtimePath, {
+            headers: getHeaders("github")
+          })
+            .then(r => r.ok ? r.json() : null)
+            .then(obj => {
+              const content = atob(obj?.content || '');
+              const match = /spec_version:\s(?<version>\d+_\d+_\d+)/.exec(content);
+              return match?.groups?.version?.replace(/_/g, "") || null;
             });
 
-            // Create table rows
-            for (const item of data) {
-                const tr = document.createElement('tr');
-
-                const nameTd = document.createElement('td');
-                nameTd.textContent = `${item.name} (${item.specName})`;
-                tr.appendChild(nameTd);
-
-                const clientTd = document.createElement('td');
-                const latestClientTd = document.createElement('td');
-                clientTd.textContent = item.client;
-                latestClientTd.textContent = item.latestClient;
-                if (item.client === item.latestClient) {
-                    latestClientTd.style = "background-color: #e8f7e1;";
-                    clientTd.style = "background-color: #e8f7e1;";
-                } else {
-                    latestClientTd.style = "background-color: #FBCEB1;";
-                    clientTd.style = "background-color: #FBCEB1;";
-                }
-                tr.appendChild(clientTd);
-                tr.appendChild(latestClientTd);
-
-                const runtimeTd = document.createElement('td');
-                const latestRuntime = document.createElement('td');
-                runtimeTd.textContent = item.runtime;
-                latestRuntime.textContent = item.latestRuntime;
-                if (item.runtime === item.latestRuntime) {
-                    latestRuntime.style = "background-color: #e8f7e1;";
-                    runtimeTd.style = "background-color: #e8f7e1;";
-                } else {
-                    latestRuntime.style = "background-color: #FBCEB1;";
-                    runtimeTd.style = "background-color: #FBCEB1;";
-                }
-                tr.appendChild(runtimeTd);
-                tr.appendChild(latestRuntime);
-
-                const timestamp = document.createElement('td');
-                timestamp.textContent = timeAgo(item.lastBlockTimestamp);
-                tr.appendChild(timestamp);
-
-                tbody.appendChild(tr);
-            }
-           
-        })
-        .catch(error => {
-            console.error('Error fetching data:', error);
-        });
-
-        fetchData(relays, true).then(data => {
-            console.log(data);
-            // Populate table with the data
-            const table = document.getElementById('data-table-relays');
-            const thead = table.querySelector('thead tr');
-            const tbody = table.querySelector('tbody');
-
-            // Create table headers
-            ["Network", "Current Client", "Latest Client", "Current Runtime", "Latest Runtime", "Last Block"].forEach(key => {
-                const th = document.createElement('th');
-                th.textContent = key.charAt(0).toUpperCase() + key.slice(1); // Capitalize first letter
-                thead.appendChild(th);
+          latestReleases = [latestClientRelease, latestRuntimeRelease];
+        } else {
+          latestReleases = await fetch(
+            "https://api.github.com/repos/moonbeam-foundation/moonbeam/releases",
+            { headers: getHeaders("github") }
+          )
+            .then(r => r.ok ? r.json() : [])
+            .then(arr => {
+              const client = arr.find(item => item.tag_name.startsWith("v"));
+              const runtime = arr.find(item => item.tag_name.startsWith("runtime-"));
+              return [client?.tag_name?.slice(1), runtime?.tag_name?.replace("runtime-", "")];
             });
+        }
 
-            // Create table rows
-            for (const item of data) {
-                const tr = document.createElement('tr');
+        const lastBlock = await safePost(url, JSON.stringify({
+          id: 1,
+          jsonrpc: "2.0",
+          method: "state_getStorage",
+          params: ["0xf0c365c3cf59d671eb72da0e7a4113c49f1f0515f462cdcf84e0f1d6045dfcbb"]
+        })).then(res => res?.result);
 
-                const nameTd = document.createElement('td');
-                nameTd.textContent = `${item.name} (${item.specName})`;
-                tr.appendChild(nameTd);
+        if (!systemChain || !systemVersion || !runtimeVersion) return null;
 
-                const clientTd = document.createElement('td');
-                const latestClientTd = document.createElement('td');
-                clientTd.textContent = item.client;
-                latestClientTd.textContent = item.latestClient;
-                if (item.client === item.latestClient) {
-                    latestClientTd.style = "background-color: #e8f7e1;";
-                    clientTd.style = "background-color: #e8f7e1;";
-                } else {
-                    latestClientTd.style = "background-color: #FBCEB1;";
-                    clientTd.style = "background-color: #FBCEB1;";
-                }
-                tr.appendChild(clientTd);
-                tr.appendChild(latestClientTd);
+        return {
+          name: systemChain,
+          client: systemVersion,
+          latestClient: latestReleases[0],
+          runtime: String(runtimeVersion.result.specVersion),
+          specName: runtimeVersion.result.specName,
+          latestRuntime: latestReleases[1],
+          lastBlockTimestamp: Number(decodeScaleU64(lastBlock))
+        };
+      }));
+      return results.filter(Boolean);
+    }
 
-                const runtimeTd = document.createElement('td');
-                const latestRuntime = document.createElement('td');
-                runtimeTd.textContent = item.runtime;
-                latestRuntime.textContent = item.latestRuntime;
-                if (item.runtime === item.latestRuntime) {
-                    latestRuntime.style = "background-color: #e8f7e1;";
-                    runtimeTd.style = "background-color: #e8f7e1;";
-                } else {
-                    latestRuntime.style = "background-color: #FBCEB1;";
-                    runtimeTd.style = "background-color: #FBCEB1;";
-                }
-                tr.appendChild(runtimeTd);
-                tr.appendChild(latestRuntime);
+    function populateTable(data, tableId) {
+      const table = document.getElementById(tableId);
+      const thead = table.querySelector("thead tr");
+      const tbody = table.querySelector("tbody");
+      thead.innerHTML = '';
+      tbody.innerHTML = '';
 
-                const timestamp = document.createElement('td');
-                timestamp.textContent = timeAgo(item.lastBlockTimestamp);
-                tr.appendChild(timestamp);
+      const headers = ["Network", "Current Client", "Latest Client", "Current Runtime", "Latest Runtime", "Last Block"];
+      headers.forEach(text => {
+        const th = document.createElement("th");
+        th.textContent = text;
+        thead.appendChild(th);
+      });
 
-                tbody.appendChild(tr);
-            }
-           
-        })
-        .catch(error => {
-            console.error('Error fetching data:', error);
+      data.forEach(item => {
+        const tr = document.createElement("tr");
+
+        const cells = [
+          `${item.name} (${item.specName})`,
+          item.client,
+          item.latestClient,
+          item.runtime,
+          item.latestRuntime,
+          timeAgo(item.lastBlockTimestamp)
+        ];
+
+        cells.forEach((value, index) => {
+          const td = document.createElement("td");
+          td.textContent = value;
+
+          if (
+            (index === 1 || index === 2) && item.client !== item.latestClient ||
+            (index === 3 || index === 4) && item.runtime !== item.latestRuntime
+          ) {
+            td.style.backgroundColor = "#FBCEB1";
+          } else if (index >= 1 && index <= 4) {
+            td.style.backgroundColor = "#e8f7e1";
+          }
+
+          tr.appendChild(td);
         });
-    </script>
+
+        tbody.appendChild(tr);
+      });
+    }
+
+    // Fetch and populate all tables
+    fetchData(parachains).then(data => populateTable(data, "data-table-paras"));
+    fetchData(systemParachains, true).then(data => populateTable(data, "data-table-system"));
+    fetchData(relays, true).then(data => populateTable(data, "data-table-relays"));
+  </script>
 </body>
 </html>
