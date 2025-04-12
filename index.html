@@ -4,40 +4,118 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Moonbeam Infra</title>
+
   <style>
+    :root {
+      --color-bg: #f4f6f8;
+      --color-card: #ffffff;
+      --color-border: #dce1e6;
+      --color-header: #2c3e50;
+      --color-accent: #3498db;
+      --color-pass: #e8f7e1;
+      --color-fail: #fce4d6;
+      --color-text: #333;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
     body {
-      font-family: Arial, sans-serif;
-      background-color: #f9f9f9;
-      margin: 2em;
+      margin: 0;
+      padding: 2rem;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background-color: var(--color-bg);
+      color: var(--color-text);
     }
 
     h1 {
-      margin-top: 2em;
+      color: var(--color-header);
+      font-size: 1.8rem;
+      margin-top: 3rem;
+      margin-bottom: 1rem;
     }
 
     table {
       width: 100%;
       border-collapse: collapse;
-      margin-bottom: 2em;
-      background-color: #fff;
+      margin-bottom: 2rem;
+      background-color: var(--color-card);
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+      border: 1px solid var(--color-border);
+      border-radius: 5px;
+      overflow: hidden;
+      animation: fadeIn 0.5s ease-in-out;
     }
 
-    table, th, td {
-      border: 1px solid black;
-    }
-
-    th {
-      background-color: #333;
-      color: white;
-      text-align: left;
+    thead {
+      background-color: var(--color-header);
+      color: #fff;
     }
 
     th, td {
-      padding: 8px;
+      padding: 12px 16px;
+      text-align: left;
+    }
+
+    tbody tr:nth-child(odd) {
+      background-color: #f9fafb;
+    }
+
+    tbody tr:hover {
+      background-color: #f1faff;
+    }
+
+    td.pass {
+      background-color: var(--color-pass);
+      transition: background-color 0.3s;
+    }
+
+    td.fail {
+      background-color: var(--color-fail);
+      transition: background-color 0.3s;
+    }
+
+    @media (max-width: 768px) {
+      table, thead, tbody, th, td, tr {
+        display: block;
+      }
+
+      thead {
+        display: none;
+      }
+
+      tr {
+        margin-bottom: 1rem;
+        border: 1px solid var(--color-border);
+        border-radius: 4px;
+        padding: 10px;
+        background-color: white;
+      }
+
+      td {
+        display: flex;
+        justify-content: space-between;
+        padding: 8px 10px;
+        border: none;
+        border-bottom: 1px solid #eee;
+      }
+
+      td::before {
+        content: attr(data-label);
+        font-weight: bold;
+        margin-right: 1rem;
+      }
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
     }
   </style>
 </head>
 <body>
+
   <h1>Parachains</h1>
   <table id="data-table-paras">
     <thead><tr></tr></thead>
@@ -240,14 +318,15 @@
         cells.forEach((value, index) => {
           const td = document.createElement("td");
           td.textContent = value;
+          td.setAttribute("data-label", headers[index]);
 
           if (
             (index === 1 || index === 2) && item.client !== item.latestClient ||
             (index === 3 || index === 4) && item.runtime !== item.latestRuntime
           ) {
-            td.style.backgroundColor = "#FBCEB1";
+            td.classList.add("fail");
           } else if (index >= 1 && index <= 4) {
-            td.style.backgroundColor = "#e8f7e1";
+            td.classList.add("pass");
           }
 
           tr.appendChild(td);
