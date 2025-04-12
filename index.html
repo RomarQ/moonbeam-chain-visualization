@@ -195,12 +195,10 @@
                     .catch(err => console.error(err));
                     
                     let runtimeFile = "";
-                    if (systemChain.includes("Moonsama")) {
-                        runtimeFile = "https://api.github.com/repos/polkadot-fellows/runtimes/contents/relay/kusama/src/lib.rs";
-                    } else if (systemChain.includes("Moonlama")) {
-                        runtimeFile = "https://api.github.com/repos/polkadot-fellows/runtimes/contents/relay/polkadot/src/lib.rs";
-                    } else {
+                    if (runtimeVersion.result.specName === "westend") {
                         runtimeFile = "https://api.github.com/repos/paritytech/polkadot-sdk/contents/polkadot/runtime/westend/src/lib.rs";
+                    } else {
+                        runtimeFile = `https://api.github.com/repos/polkadot-fellows/runtimes/contents/relay/${runtimeVersion.result.specName}/src/lib.rs`;
                     }
 
                     const latestRuntimeRelease = await fetch(runtimeFile,
