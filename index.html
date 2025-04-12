@@ -30,6 +30,16 @@
         </tbody>
     </table>
 
+    <h1>System Parachains</h1>
+    <table id="data-table-system">
+        <thead>
+            <tr>
+            </tr>
+        </thead>
+        <tbody>
+        </tbody>
+    </table>
+
     <h1>Relaychains</h1>
     <table id="data-table-relays">
         <thead>
@@ -50,7 +60,10 @@
             'https://wss.api.moonriver.moonbeam.network',
             'https://wss.api.moonbeam.network',
         ];
-        const systemParachains = [];
+        const systemParachains = [
+            "https://coretime.api.moonbase.moonbeam.network",
+            "https://statemint.api.moonbase.moonbeam.network"
+        ];
         const relays = [
             'https://deo-moonsama-relay-rpc-1.rv.moondev.network',
             'https://moonlama-relay.api.moondev.network',
@@ -136,7 +149,7 @@
                     body
                 }).then(response => response.json());
         }
-        async function fetchData(urls, relay = false) {
+        async function fetchData(urls, external = false) {
             let result = (await Promise.all(urls.map(async url => {
                 const runtimeVersion = await post(
                     url, 
@@ -176,7 +189,7 @@
                 .catch(err => console.error(err));
 
                 let latestReleases = [];
-                if (relay) {
+                if (external) {
                     const latestClientRelease = await fetch("https://api.github.com/repos/paritytech/polkadot-sdk/releases/latest",
                         { 
                             method: "GET",
@@ -195,7 +208,11 @@
                     .catch(err => console.error(err));
                     
                     let runtimeFile = "";
-                    if (runtimeVersion.result.specName === "westend") {
+                    if (runtimeVersion.result.specName.startsWith("westmint")) {
+                        runtimeFile = `https://api.github.com/repos/paritytech/polkadot-sdk/contents/cumulus/parachains/runtimes/assets/asset-hub-westend/src/lib.rs`;
+                    } else if (runtimeVersion.result.specName.startsWith("coretime")) {
+                        runtimeFile = `https://api.github.com/repos/paritytech/polkadot-sdk/contents/cumulus/parachains/runtimes/coretime/${runtimeVersion.result.specName}/src/lib.rs`;
+                    } else if (runtimeVersion.result.specName === "westend") {
                         runtimeFile = "https://api.github.com/repos/paritytech/polkadot-sdk/contents/polkadot/runtime/westend/src/lib.rs";
                     } else {
                         runtimeFile = `https://api.github.com/repos/polkadot-fellows/runtimes/contents/relay/${runtimeVersion.result.specName}/src/lib.rs`;
@@ -276,6 +293,67 @@
         fetchData(parachains).then(data => {
             // Populate table with the data
             const table = document.getElementById('data-table-paras');
+            const thead = table.querySelector('thead tr');
+            const tbody = table.querySelector('tbody');
+
+            // Create table headers
+            ["Network", "Current Client", "Latest Client", "Current Runtime", "Latest Runtime", "Last Block"].forEach(key => {
+                const th = document.createElement('th');
+                th.textContent = key.charAt(0).toUpperCase() + key.slice(1); // Capitalize first letter
+                thead.appendChild(th);
+            });
+
+            // Create table rows
+            for (const item of data) {
+                const tr = document.createElement('tr');
+
+                const nameTd = document.createElement('td');
+                nameTd.textContent = `${item.name} (${item.specName})`;
+                tr.appendChild(nameTd);
+
+                const clientTd = document.createElement('td');
+                const latestClientTd = document.createElement('td');
+                clientTd.textContent = item.client;
+                latestClientTd.textContent = item.latestClient;
+                if (item.client === item.latestClient) {
+                    latestClientTd.style = "background-color: #e8f7e1;";
+                    clientTd.style = "background-color: #e8f7e1;";
+                } else {
+                    latestClientTd.style = "background-color: #FBCEB1;";
+                    clientTd.style = "background-color: #FBCEB1;";
+                }
+                tr.appendChild(clientTd);
+                tr.appendChild(latestClientTd);
+
+                const runtimeTd = document.createElement('td');
+                const latestRuntime = document.createElement('td');
+                runtimeTd.textContent = item.runtime;
+                latestRuntime.textContent = item.latestRuntime;
+                if (item.runtime === item.latestRuntime) {
+                    latestRuntime.style = "background-color: #e8f7e1;";
+                    runtimeTd.style = "background-color: #e8f7e1;";
+                } else {
+                    latestRuntime.style = "background-color: #FBCEB1;";
+                    runtimeTd.style = "background-color: #FBCEB1;";
+                }
+                tr.appendChild(runtimeTd);
+                tr.appendChild(latestRuntime);
+
+                const timestamp = document.createElement('td');
+                timestamp.textContent = timeAgo(item.lastBlockTimestamp);
+                tr.appendChild(timestamp);
+
+                tbody.appendChild(tr);
+            }
+           
+        })
+        .catch(error => {
+            console.error('Error fetching data:', error);
+        });
+
+        fetchData(systemParachains, true).then(data => {
+            // Populate table with the data
+            const table = document.getElementById('data-table-system');
             const thead = table.querySelector('thead tr');
             const tbody = table.querySelector('tbody');
 
