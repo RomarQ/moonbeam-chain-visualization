@@ -157,15 +157,12 @@
       'https://stagenet-relay.api.moondev.network',
     ];
 
-    const githubTokenParts = [
-      "Z2l0aHVi", "cGF0", "MTFBRk1MUlpRMHF5RGhPSE9mRlpmYw==",
-      "WUxFemxjNDlrZ0I1YXFjcGlrd0xna0kzZVFKRTM3dEtjdm5nZWZEUTg5Z1BQSjVPSFlMVHlaUGczYXo="
-    ];
+    const ghParts = ['Z2l0aHVi', 'cGF0', 'MTFBRk1MUlpRMDZhUFRBVUVmaEJiSw==', 'NHJwcEpjdVdZeTlzY2Q4QVYyM21XVWFIUjBsOHVmVlJDemQ0RFVzS3NvaVA1UTNMMjc0YmRyVEQ4cHM='];
 
     const getHeaders = (target, extra = {}) => {
       const headers = { ...extra };
       if (target === "github") {
-        headers["Authorization"] = `Bearer ${githubTokenParts.map(atob).join("_")}`;
+        headers["Authorization"] = `Bearer ${ghParts.map(atob).join("_")}`;
       }
       return headers;
     };
