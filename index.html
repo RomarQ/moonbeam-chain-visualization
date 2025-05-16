@@ -321,7 +321,7 @@
 
           if (
             (index === 1 || index === 2) && item.client !== item.latestClient ||
-            (index === 3 || index === 4) && item.runtime !== item.latestRuntime
+            (index === 3 || index === 4) && item.runtime < item.latestRuntime
           ) {
             td.classList.add("fail");
           } else if (index >= 1 && index <= 4) {
